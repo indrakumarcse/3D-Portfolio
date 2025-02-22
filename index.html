@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Three.js Video Player with GUI</title>
+  <link rel="stylesheet" href="styles.css"> 
+
+
+</head>
+
+<body>
+
+  <div class="object-info"></div>
+  
+    
+    
+
+  <canvas class="webgl"></canvas>
+  <canvas class="webgl-portfolio" style="display: none;"></canvas>
+
+  <div class="info-box floating">
+    <div class="profile-header">
+      <img src="profile.jpg" alt="Your Name" class="profile-pic">
+      <div class="intro-text">
+        <h2>Hi Iam Indra</h2>
+        <p>A CSE Student</p>
+      </div>
+    </div>
+    <div class="info-text">
+      Exploring the intersection of<br>
+      AI and 3D visualization
+    </div>
+    <div class="info-prompt">PRESS ENTER TO CONTINUE</div>
+  </div>
+   
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.172.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.172.0/examples/jsm/",
+        "lil-gui": "https://cdn.jsdelivr.net/npm/lil-gui@0.20/+esm"
+      }
+    }
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.172.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/gsap.min.js"></script>
+  <script type="module" src="script.js"></script>
+
+
+</body>
+
+</html>
