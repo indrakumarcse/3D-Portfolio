@@ -2,12 +2,14 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/loaders/GLTFLoader.js"; // ✅ Use CDN
 import { FBXLoader } from 'https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/loaders/FBXLoader.js';
+import { DRACOLoader } from 'https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/loaders/DRACOLoader.js';
 
 
 // ==============================================
 // Scene, Camera, Renderer Setup and orbit controlls
 // ==============================================
 let canvas = document.querySelector(".webgl");
+canvas.style.display = 'none';
 let scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf0f0f0);
 
@@ -47,27 +49,45 @@ let secondport;
 // Loading Manager and UI Elements
 const loadingManager = new THREE.LoadingManager(
     () => {
-        document.querySelector('.loading-container').style.display = 'none';
-        showSystemMessage();
+        // Initialize audio
+        bgMusic = new Audio('sounds/intro.mp3');
+        bgMusic.loop = false;
+        bgMusic.volume = 0.5;
 
+        clickSound = new Audio('sounds/click1.wav');
+        clickSound.volume = 0.7;
 
-          // Initialize background music
-          bgMusic = new Audio('sounds/intro.mp3');
-          bgMusic.loop = false;  // Play only once
-          bgMusic.volume = 0.5;
+        teleportSound = new Audio('sounds/portal1.mp3');
+        teleportSound.volume = 0.5;
 
-          clickSound = new Audio('sounds/click1.wav');
-          clickSound.volume = 0.7;
+        secondport = new Audio('sounds/portal2.mp3');
+        secondport.volume = 0.5;
 
-          teleportSound = new Audio('sounds/portal1.mp3'); 
-          teleportSound.volume = 0.5;
+        // Enable start button
+        const startButton = document.querySelector('.start-button');
+        startButton.disabled = false;
 
-          secondport = new Audio('sounds/portal2.mp3'); 
-          secondport.volume = 0.5;
-          
-          // Handle autoplay restrictions
-          bgMusic.play().catch(error => {
-            console.log('Autoplay blocked - music requires user interaction');
+        // Attach click event
+        startButton.addEventListener('click', () => {
+            // Hide loading screen
+            document.querySelector('.loading-container').style.display = 'none';
+            // Show main canvas
+            document.querySelector('.webgl').style.display = 'block';
+            // Play background music
+            if (bgMusic) {
+                bgMusic.currentTime = 0;
+                bgMusic.volume = 0.5;
+                bgMusic.loop = false;
+                bgMusic.play().then(() => {
+                    console.log('Background music started successfully');
+                }).catch(e => {
+                    console.error('Background music play failed:', e);
+                });
+            }
+            // Show system message
+            showSystemMessage();
+            // Remove the start button
+            document.querySelector('.start-button-container').remove();
         });
     },
     (item, loaded, total) => {
@@ -83,15 +103,20 @@ const loadingManager = new THREE.LoadingManager(
             `conic-gradient(#00f7ff ${progress * 3.6}deg, #000 0deg)`;
     }
 );
+
+
 // Create loading screen
 const loadingHTML = `
-<div class="loading-container">
+<div class="loading-container" style="z-index: 999;">
   <div class="circular-progress">
     <div class="progress-value">0%</div>
   </div>
   <div class="loading-text">System Initializing</div>
 </div>`;
 document.body.insertAdjacentHTML('beforeend', loadingHTML);
+
+
+showStartButton();
 
 // System message styling
 const systemMessageHTML = `
@@ -228,9 +253,53 @@ const tvTextCSS = `
     100% { background-position: 0 100%; }
 }
 `;
-const style = document.createElement('style');
-style.textContent = tvTextCSS;
-document.head.appendChild(style);
+// const style = document.createElement('style');
+// style.textContent = tvTextCSS;
+// document.head.appendChild(style);
+
+
+const startButtonCSS = `
+.start-button-container {
+    position: fixed;
+    bottom: 30px; /* Fixed distance from bottom */
+    left: 50%;
+    transform: translateX(-50%); /* Center horizontally */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+.start-button {
+    padding: 20px 40px;
+    font-family: 'Courier New', monospace;
+    font-size: 1.5em;
+    color: #00ff9d;
+    background: linear-gradient(45deg, rgba(0,20,0,0.9), rgba(0,40,20,0.9));
+    border: 2px solid #00ff9d;
+    border-radius: 8px;
+    cursor: pointer;
+    text-shadow: 0 0 10px rgba(0, 255, 157, 0.6);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+.start-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(0, 255, 157, 1);
+}
+`;
+
+
+// const style = document.createElement('style');
+// style.textContent = startButtonCSS;
+// document.head.appendChild(style);
+
+// Around line 136, after tvTextCSS and startButtonCSS definitions
+const combinedCSS = `
+${tvTextCSS}
+${startButtonCSS}
+`;
+const styleElement = document.createElement('style');
+styleElement.textContent = combinedCSS;
+document.head.appendChild(styleElement);
 
 const tvTextHTML = `
 <div class="tv-message">
@@ -346,6 +415,19 @@ const portalMaterial = new THREE.ShaderMaterial({
     side: THREE.DoubleSide
 });
 
+
+
+function showStartButton() {
+    const startButtonHTML = `
+        <div class="start-button-container">
+            <button class="start-button" disabled>Start Experience</button>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', startButtonHTML);
+}
+
+
+
 // Create a mystical portal geometry
 const portalGeometry = new THREE.CircleGeometry(2, 64);
 const portalMesh = new THREE.Mesh(portalGeometry, portalMaterial);
@@ -363,8 +445,8 @@ const textureLoader = new THREE.TextureLoader();
 // const fbxLoader = new FBXLoader(loadingManager);
 
 // Wall and Floor Textures
-const wallTextures = textureLoader.load("textures/wall-texture1.jpg");
-const floorTextures = textureLoader.load("textures/wood-floor4.jpg");
+const wallTextures = textureLoader.load("textures2/wall-texture1.jpg");
+const floorTextures = textureLoader.load("textures2/wood-floor4.jpg");
 
 // ==========================
 // Lighting Setup
@@ -552,42 +634,6 @@ const backPanelMesh = new THREE.Mesh(backPanelGeometry, backPanelMaterial);
 backPanelMesh.position.set(0, 19, -50.1); 
 scene.add(backPanelMesh);
 
-// ==========================
-// Video Textures
-// ==========================
-const videoSources = ["video.webm"];
-let currentVideoIndex = 0;
-const video = document.createElement("video");
-video.src = videoSources[currentVideoIndex];
-video.loop = true;
-video.muted = false;
-video.setAttribute("playsinline", "");
-
-// ==========================
-// Function to setup video texture
-// ==========================
-let videoTexture; 
-function videoTextureSetup() {
-    video.load(); 
-
-    if (!videoTexture) {
-        videoTexture = new THREE.VideoTexture(video);
-        videoTexture.colorSpace = THREE.SRGBColorSpace;
-    }
-
-    const screenGeometry = new THREE.PlaneGeometry(34, 18);
-    const screenMaterial = new THREE.MeshBasicMaterial({ 
-        map: videoTexture, 
-        side: THREE.FrontSide 
-    });
-
-    const screenMesh = new THREE.Mesh(screenGeometry, screenMaterial);
-    screenMesh.position.set(0, 19, -49.5); 
-    screenMesh.name = "screenMesh";
-    scene.add(screenMesh);
-}
-
-videoTextureSetup();
 
 
 loader.load("GLB/Couch.glb", (gltf) => {
@@ -628,7 +674,7 @@ let walking = false;
 let sitting = false;
 
 const characterFbxLoader = new FBXLoader();
-characterFbxLoader.load('Standing Idle.fbx', (fbx) => {
+characterFbxLoader.load('fbx/Standing Idle.fbx', (fbx) => {
     man = fbx;
     man.scale.set(0.1, 0.1, 0.1);
     man.position.set(-240, -12.5, 15);
@@ -637,11 +683,11 @@ characterFbxLoader.load('Standing Idle.fbx', (fbx) => {
 
     mixer = new THREE.AnimationMixer(man);
 
-    characterFbxLoader.load('Walking-2.fbx', (anim) => {
+    characterFbxLoader.load('fbx/Walking-2.fbx', (anim) => {
         walkAction = mixer.clipAction(anim.animations[0]);
     });
     
-    characterFbxLoader.load('Stand To Sit.fbx', (anim) => {
+    characterFbxLoader.load('fbx/Stand To Sit.fbx', (anim) => {
         sitAction = mixer.clipAction(anim.animations[0]);
         sitAction.setLoop(THREE.LoopOnce); 
         sitAction.clampWhenFinished = true;
@@ -856,9 +902,9 @@ function handleTeleportKey(e) {
 
 
         const profileImage = new Image();
-         profileImage.src = 'profile.jpg';
+         profileImage.src = 'textures/profile.jpg';
          profileImage.onload = () => {
-        document.querySelector('.profile-pic').src = 'profile.jpg';
+        document.querySelector('.profile-pic').src = 'textures/profile.jpg';
      };
         
         // const portfolioLoader = new GLTFLoader(portfolioLoadingManager);
@@ -903,6 +949,12 @@ function handleTeleportKey(e) {
         portfolioControls = new OrbitControls(portfolioCamera, portfolioCanvas);
         portfolioControls.enableDamping = true;
         portfolioControls.dampingFactor = 0.05;
+        portfolioControls.minDistance = 10; // Prevent camera from getting too close
+        portfolioControls.maxDistance = 500; // Keep camera within room bounds
+        // portfolioControls.minPolarAngle = Math.PI / 4; // Limit vertical angle to avoid seeing floor/ceiling
+        // portfolioControls.maxPolarAngle = 3 * Math.PI / 4; // Limit vertical angle
+        // portfolioControls.minAzimuthAngle = -Math.PI / 2; // Limit horizontal rotation
+        // portfolioControls.maxAzimuthAngle = Math.PI / 2; // Limit horizontal rotation
         // portfolioControls.enabled = false; // Start disabled
 
         // Set up portfolio scene
@@ -1033,53 +1085,53 @@ const objectInfoMap = {
         content: `Full Stack Hackathon and Boot Camp (2024):\n
               - Top 10 in CodeCamp Challenge with real-time scheduling web app
               - Recognized for innovative UI/UX in educational tech category\n\n
-              Merit Scholarship Award (2023):\n
+                Merit Scholarship Award (2023):\n
               - Awarded college-wide academic scholarship
               - Ranked in top 5% for 2nd year academic performance`
     },
     desk: {
-        title: "💻 Development Skills",
+        title: "💻 Technical Skills",
         content: `➜ 3D & XR: Three.js, WebXR\n
                   ➜ Languages: Java, Python\n
-                  ➜ Front End: JavaScript, React.js, Html, Css\n
+                  ➜ Front End: JavaScript, React.js, Tailwind CSS, Html, Css\n
                   ➜ Machine Learning: Predictive Modelling, TensorFlow, PyTorch, Scikit-learn\n
+                  ➜ Dev-Ops\n
                   ➜ Cloud: AWS`
     },
     bookshelf: {
-        title: "📚 Professional Experience",
-        content: `➜ Current: Student Intern @PlugXR (2025)\n
+        title: "📚 Intersnhip Experience",
+        content: `➜ Student Intern @PlugXR (2025)\n
                   - Developing AR/VR solutions using Three.js and WebXR frameworks
                   - Created 3D portfolio showcasing interactive product visualizations\n\n
                   ➜ ML Intern @DataPro (2024)\n
                   - Built predictive maintenance models reducing equipment downtime by 30%
                   - Developed interactive dashboards using Tableau for model performance visualization
-                  - Optimized Random Forest algorithms achieving 92% prediction accuracy\n\n
+                  - Optimized Random Forest algorithms achieving 96% prediction accuracy\n\n
                   ➜ Full Stack Intern @HMI Tech (2023)\n
-                  - Revamped legacy systems using modern JavaScript (ES6+) and REST APIs
-                  - Created responsive UI components achieving 98% Lighthouse accessibility score
-                  - Integrated Mapbox APIs for real-time geolocation features`
+                  - Built a full-stack web application using modern JavaScript, responsive UI components, and REST APIs, achieving high accessibility and performance scores.`
     },
     chamber: {
-        title: "🔬 Projects & Research",
-        content: `➜ 3D Portfolio Suite:\n
-                  - Developed interactive 3D web experiences using Three.js and WebXR
-                  - Created AR-based portfolio with gesture-controlled 3D model viewer
-                  - Implemented custom GLSL shaders for realistic material rendering\n\n
-                  ➜ Smart Timetable Generator (Full Stack):\n
-                  - Developed responsive frontend with React/Next.js drag-and-drop interface
-                  - Designed RESTful backend APIs for schedule management and conflict resolution
-                  - Implemented iCalendar standard integration for cross-platform compatibility\n\n
-                  ➜ AgriGrowth Predictor (ML):\n
-                  - Plant growth prediction model using multivariate regression
-                  - Achieved 89% accuracy with TensorFlow and Scikit-learn
-                  - Integrated weather API and soil sensor data visualization
-                  - Deployed using Gradio Interface`
+        title: "🔬 Projects",
+        content: `➜ Malicious Page Detection (Full Stack and ML):\n
+                - Developed a detection system for malicious websites using machine learning algorithms
+                - Trained classification models on URL and user behavior data
+                - Integrated real-time detection through Flask-based REST APIs\n\n
+                ➜ AR/VR & 3D Projects (using Three.js):\n
+                - Created a 3D Mario-style platformer game with interactive controls
+                - Built a Fruit Samurai game with real-time slicing effects
+                - Designed a controllable 3D virtual room with interactive portfolio elements
+                - Developed a gesture-enabled 3D portfolio using WebXR and custom GLSL shaders\n\n
+                ➜ AgriGrowth Predictor (ML):\n
+                - Plant growth prediction model using multivariate regression
+                - Achieved 89% accuracy with TensorFlow and Scikit-learn
+                - Integrated weather API and soil sensor data visualization
+                - Deployed using Gradio Interface`
     },
     cap: {
         title: "👨🎓 Education",
         content: `➜ B.Tech in Computer Science
                   Sitam College (2022 - 2025)
-                  Percentage: 71%\n
+                  Percentage: 73%\n
                   ➜ Diploma in Metallurgical Engineering
                   MRAGR Polytechnic College (2018 - 2021)
                   Percentage: 85%\n
@@ -1172,19 +1224,17 @@ function onPortfolioClick(event) {
     if (intersects.length > 0) {
         obj = intersects[0].object;
         
-        // First check for certificate screen
+        // Check for certificate screen
         let screenObj = obj;
         while (screenObj && !screenObj.name.includes("certificateScreen") && screenObj.parent) {
             screenObj = screenObj.parent;
         }
 
-
-
         if (screenObj && screenObj.name === "certificateScreen") {
             validClick = true;
             const currentTime = Date.now();
             
-            // Double-click detection (300ms threshold)
+            // Double-click detection
             if (currentTime - lastClickTime < 300) {
                 if (screenObj.userData.isActive) {
                     screenObj.userData.toggle();
@@ -1201,7 +1251,7 @@ function onPortfolioClick(event) {
             }
         }
 
-        // Rest of the object handling code...
+        // Object handling
         let foundKey = null;
         while (obj) {
             foundKey = Object.keys(objectInfoMap).find(key => 
@@ -1211,47 +1261,49 @@ function onPortfolioClick(event) {
             obj = obj.parent;
         }
 
-       
         if (foundKey) {
             validClick = true;
-            // Store original scale and animate with relative values
-            const originalScale = {
-                x: obj.scale.x,
-                y: obj.scale.y,
-                z: obj.scale.z
-            };
+            // Prevent stacking animations
+            if (!obj.userData.isAnimating) {
+                obj.userData.isAnimating = true;
+                
+                // Store original scale
+                const originalScale = {
+                    x: obj.scale.x,
+                    y: obj.scale.y,
+                    z: obj.scale.z
+                };
 
-
-            // Animate with 20% scale increase
-            gsap.to(obj.scale, {
-                x: originalScale.x * 1.2,
-                y: originalScale.y * 1.2,
-                z: originalScale.z * 1.2,
-                duration: 0.3,
-                yoyo: true,
-                repeat: 1,
-                ease: "power2.inOut",
-                onComplete: () => {
-                    // Reset to exact original scale after animation
-                    obj.scale.set(originalScale.x, originalScale.y, originalScale.z);
-                }
-            });
-            
-            // Show object info
-            showObjectInfo(objectInfoMap[foundKey], intersects[0].point, true);
+                // Animate with 20% scale increase
+                gsap.to(obj.scale, {
+                    x: originalScale.x * 1.2,
+                    y: originalScale.y * 1.2,
+                    z: originalScale.z * 1.2,
+                    duration: 0.3,
+                    yoyo: true,
+                    repeat: 1,
+                    ease: "power2.inOut",
+                    onComplete: () => {
+                        // Reset to original scale and animation flag
+                        obj.scale.set(originalScale.x, originalScale.y, originalScale.z);
+                        obj.userData.isAnimating = false;
+                    }
+                });
+                
+                // Show object info
+                showObjectInfo(objectInfoMap[foundKey], intersects[0].point, true);
+            }
         }
 
-                // Play sound only for valid clicks
-                if (validClick && clickSound) {
-                    clickSound.currentTime = 0;
-                    clickSound.play().catch(e => console.error('Click sound error:', e));
-                }
-        
+        // Play sound for valid clicks
+        if (validClick && clickSound) {
+            clickSound.currentTime = 0;
+            clickSound.play().catch(e => console.error('Click sound error:', e));
+        }
     } else {
         hideObjectInfo();
     }
 }
-
 
 function showObjectInfo(info, position,  isClick = false) {
     const infoDiv = document.querySelector('.object-info');
@@ -1396,15 +1448,22 @@ const roomWidth = 800;
 const roomHeight = 400;
 const roomDepth = 800;
 function loadPortfolioRoom() {
+
+
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/libs/draco/');
+
+
     const loader = new GLTFLoader(portfolioLoadingManager);
+    loader.setDRACOLoader(dracoLoader);
+
     const textureLoader = new THREE.TextureLoader(portfolioLoadingManager);
-   
-    
+
 
     // ======================
     // Realistic Wall Setup
     // ======================
-    const wallTexture = textureLoader.load('textures/solid blue-texture.jpg');
+    const wallTexture = textureLoader.load('textures2/solid blue-texture1.jpg');
     const wallMaterial = new THREE.MeshStandardMaterial({
         map: wallTexture,
         roughness: 0.7,
@@ -1451,7 +1510,7 @@ function loadPortfolioRoom() {
     // Realistic Props
     // ======================
     // Bookshelf
-    loader.load('models/bookshelf1.glb', (gltf) => {
+    loader.load('models2/bookshelf1.glb', (gltf) => {
         const shelf = gltf.scene;
         shelf.name = "bookshelf";
         shelf.position.set(-roomWidth / 2 + 750, -roomHeight / 2 + 20, -roomDepth / 2 + 300);
@@ -1482,7 +1541,7 @@ function loadPortfolioRoom() {
         portfolioScene.add(desk);
     });
 
-    loader.load('models/stand1.glb', (gltf) => {
+    loader.load('models2/stand1.glb', (gltf) => {
         const stand = gltf.scene;
         stand.position.set(-roomWidth / 2 + 400, -roomHeight / 2 + 15, -roomDepth / 2 + 50);
         stand.scale.set(300, 200, 300);
@@ -1508,10 +1567,10 @@ function loadPortfolioRoom() {
     });
  
 
-    loader.load('models/lamp.glb', (gltf) => {
+    loader.load('models/lamp2.glb', (gltf) => {
         const lamp = gltf.scene;
         lamp.position.set(-roomWidth / 2 + 750, -roomHeight / 2 + 20, -roomDepth / 2 + 90);
-        lamp.scale.set(2, 2, 2);
+        lamp.scale.set(10, 10, 10);
         lamp.rotation.y = -Math.PI / 2;
         lamp.traverse((child) => {
             if (child.isMesh) {
@@ -1674,7 +1733,7 @@ function loadPortfolioRoom() {
                         }
                     };
                     window.addEventListener('keydown', handleIntroKey);
-                }, 7000);
+                }, 4000);
             
                 // Add to floating objects array
                 floatingObjects.push({
@@ -1911,9 +1970,8 @@ const maxScrollSteps = 100;
 
 window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowDown' && !isAnimating) {
-
         if (clickSound) {
-            clickSound.currentTime = 0; // Reset sound to start
+            clickSound.currentTime = 0;
             clickSound.play().catch(e => console.error('Click sound play failed:', e));
         }
 
@@ -1924,9 +1982,11 @@ window.addEventListener('keydown', (e) => {
             }
         }, 1880);
 
-
+        // Stop background music
         if (bgMusic && !bgMusic.paused) {
             bgMusic.pause();
+            bgMusic.currentTime = 0; // Reset to start for next play
+            console.log('Background music stopped');
         }
 
         document.querySelector('.system-message').style.display = 'none';
